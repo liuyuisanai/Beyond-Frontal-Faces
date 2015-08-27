@@ -1,0 +1,334 @@
+name: "Zeiler_conv5"
+
+input: "data"
+input_dim: 1
+input_dim: 3
+input_dim: 224
+input_dim: 224
+
+input: "rois"
+input_dim: 1 # to be changed on-the-fly to num ROIs
+input_dim: 5 # [batch ind, x1, y1, x2, y2] zero-based indexing
+input_dim: 1
+input_dim: 1
+
+# ------------------------ layer 1 -----------------------------
+layers {
+   name: "conv1"
+   type: CONVOLUTION
+   bottom: "data"
+   top: "conv1"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+   convolution_param{
+	   num_output: 96
+	   kernel_size: 7
+	   pad: 3
+	   stride: 2
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 0
+	   }
+   }
+}
+
+layers {
+   name: "relu1"
+   type: RELU
+   bottom: "conv1"
+   top: "conv1"
+}
+
+layers {
+    name: "norm1"
+    type: LRN
+	bottom: "conv1"
+    top: "norm1"
+	lrn_param{
+		local_size: 3
+		alpha: 0.00005
+		beta: 0.75
+		norm_region: WITHIN_CHANNEL
+	}
+}
+
+layers {
+   name: "pool1"
+   type: POOLING
+   bottom: "norm1"
+   top: "pool1"
+   pooling_param{
+	   kernel_size: 3
+	   stride: 2
+	   pad: 1
+	   pool: MAX
+   }
+}
+
+
+# --------------------------- layer 2 ------------------------
+layers {
+   name: "conv2"
+   type: CONVOLUTION
+   bottom: "pool1"
+   top: "conv2"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+   convolution_param{
+	   num_output: 256
+	   kernel_size: 5
+	   pad: 2
+	   stride: 2
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 1
+	   }
+   }
+}
+
+layers {
+   name: "relu2"
+   type: RELU
+   bottom: "conv2"
+   top: "conv2"
+}
+
+layers {
+    name: "norm2"
+    type: LRN
+	bottom: "conv2"
+    top: "norm2"
+	lrn_param{
+		local_size: 3
+		alpha: 0.00005
+		beta: 0.75
+		norm_region: WITHIN_CHANNEL
+	}
+}
+
+layers {
+   name: "pool2"
+   type: POOLING
+   bottom: "norm2"
+   top: "pool2"
+   pooling_param{
+	   kernel_size: 3
+	   stride: 2
+	   pad: 1
+	   pool: MAX
+   }
+}
+
+#-----------------------layer 3-------------------------
+layers {
+   name: "conv3"
+   type: CONVOLUTION
+   bottom: "pool2"
+   top: "conv3"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+   convolution_param{
+	   num_output: 384
+	   kernel_size: 3
+	   pad: 1
+	   stride: 1
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 0
+	   }
+   }
+}
+
+layers {
+   name: "relu3"
+   type: RELU
+   bottom: "conv3"
+   top: "conv3"
+}
+
+#-----------------------layer 4-------------------------
+layers {
+   name: "conv4"
+   type: CONVOLUTION
+   bottom: "conv3"
+   top: "conv4"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+   convolution_param{
+	   num_output: 384
+	   kernel_size: 3
+	   pad: 1
+	   stride: 1
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 1
+	   }
+   }
+}
+
+layers {
+   name: "relu4"
+   type: RELU
+   bottom: "conv4"
+   top: "conv4"
+}
+
+#-----------------------layer 5-------------------------
+layers {
+   name: "conv5"
+   type: CONVOLUTION
+   bottom: "conv4"
+   top: "conv5"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+   convolution_param{
+	   num_output: 256
+	   kernel_size: 3
+	   pad: 1
+	   stride: 1
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 1
+	   }
+   }
+}
+
+layers {
+   name: "relu5"
+   type: RELU
+   bottom: "conv5"
+   top: "conv5"
+}
+
+#--------------------------layer spm------------------------
+layers {
+  bottom: "conv5"
+  bottom: "rois"
+  top: "pool5"
+  name: "roi_pool5"
+  type: ROIPOOLING
+  roi_pooling_param {
+    pooled_w: 6
+    pooled_h: 6
+  }
+}
+layers {
+  bottom: "pool5"
+  top: "fc6"
+  name: "fc6"
+   blobs_lr: 1.0
+   blobs_lr: 2.0
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layers {
+  bottom: "fc6"
+  top: "fc6"
+  name: "relu6"
+  type: RELU
+}
+layers {
+  bottom: "fc6"
+  top: "fc6"
+  name: "drop6"
+  type: DROPOUT
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  bottom: "fc6"
+  top: "fc7"
+  name: "fc7"
+  blobs_lr: 1.0
+  blobs_lr: 2.0
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layers {
+  bottom: "fc7"
+  top: "fc7"
+  name: "relu7"
+  type: RELU
+}
+layers {
+  bottom: "fc7"
+  top: "fc7"
+  name: "drop7"
+  type: DROPOUT
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  bottom: "fc7"
+  top: "cls_score"
+  name: "cls_score"
+  blobs_lr: 1.0
+  blobs_lr: 2.0
+  type: INNER_PRODUCT
+   inner_product_param{
+	   num_output: 21
+	   weight_filler {
+		 type: "gaussian"
+		 std: 0.01
+	   }
+	   bias_filler {
+		 type: "constant"
+		 value: 0
+	   }
+   }
+}
+
+layers {
+  bottom: "fc7"
+  top: "bbox_pred"
+  name: "bbox_pred"
+  type: INNER_PRODUCT
+  blobs_lr: 1.0
+  blobs_lr: 2.0
+  inner_product_param {
+    num_output: 84
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+#-----------------------output------------------------
+layers {
+   name: "cls_prob"
+   type: SOFTMAX
+   bottom: "cls_score"
+   top: "cls_prob"
+   loss_weight: 1
+}
